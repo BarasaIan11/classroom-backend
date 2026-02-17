@@ -5,13 +5,44 @@ import { db } from "../db";
 
 const router = express.Router();
 
+const MAX_LIMIT = 100;
+
 // Get all subjects with optional search, filtering and pagination
 router.get("/", async (req, res) => {
   try {
-    const { search, department, page = 1, limit = 10 } = req.query;
+    const { search, department } = req.query;
 
-    const currentPage = Math.max(1, +page);
-    const limitPerPage = Math.max(1, +limit);
+    // Safely parse and validate pagination parameters
+    const pageParam = req.query.page;
+    const limitParam = req.query.limit;
+
+    // Parse page parameter
+    let currentPage = 1;
+    if (pageParam) {
+      const pageStr = Array.isArray(pageParam) ? pageParam[0] : pageParam;
+      const parsedPage = Number(pageStr);
+      if (
+        Number.isFinite(parsedPage) &&
+        Number.isInteger(parsedPage) &&
+        parsedPage > 0
+      ) {
+        currentPage = parsedPage;
+      }
+    }
+
+    // Parse limit parameter with hard cap
+    let limitPerPage = 10;
+    if (limitParam) {
+      const limitStr = Array.isArray(limitParam) ? limitParam[0] : limitParam;
+      const parsedLimit = Number(limitStr);
+      if (
+        Number.isFinite(parsedLimit) &&
+        Number.isInteger(parsedLimit) &&
+        parsedLimit > 0
+      ) {
+        limitPerPage = Math.min(MAX_LIMIT, parsedLimit);
+      }
+    }
 
     const offset = (currentPage - 1) * limitPerPage;
 
@@ -28,7 +59,7 @@ router.get("/", async (req, res) => {
     }
 
     // if department filter exists, match by department name
-    if (department) {  
+    if (department) {
       filterConditions.push(ilike(departments.name, `%${department}%`));
     }
 
