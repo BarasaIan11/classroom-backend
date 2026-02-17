@@ -1,52 +1,30 @@
-import { eq } from "drizzle-orm";
-import { db } from "./db";
-import { demoUsers } from "./db/schema/index";
+import express from "express";
+import cors from "cors";
+import subjectsRouter from "./routes/subjects";
 
-async function main() {
-  try {
-    console.log("Performing CRUD operations...");
+const app = express();
+const port = 8000;
 
-    // CREATE: Insert a new user
-    const [newUser] = await db
-      .insert(demoUsers)
-      .values({ name: "Admin User", email: "admin@example.com" })
-      .returning();
-
-    if (!newUser) {
-      throw new Error("Failed to create user");
-    }
-
-    console.log("✅ CREATE: New user created:", newUser);
-
-    // READ: Select the user
-    const foundUser = await db
-      .select()
-      .from(demoUsers)
-      .where(eq(demoUsers.id, newUser.id));
-    console.log("✅ READ: Found user:", foundUser[0]);
-
-    // UPDATE: Change the user's name
-    const [updatedUser] = await db
-      .update(demoUsers)
-      .set({ name: "Super Admin" })
-      .where(eq(demoUsers.id, newUser.id))
-      .returning();
-
-    if (!updatedUser) {
-      throw new Error("Failed to update user");
-    }
-
-    console.log("✅ UPDATE: User updated:", updatedUser);
-
-    // DELETE: Remove the user
-    await db.delete(demoUsers).where(eq(demoUsers.id, newUser.id));
-    console.log("✅ DELETE: User deleted.");
-
-    console.log("\nCRUD operations completed successfully.");
-  } catch (error) {
-    console.error("❌ Error performing CRUD operations:", error);
-    process.exit(1);
-  }
+if (!process.env.FRONTEND_URL) {
+  throw new Error("FRONTEND_URL is not set in .env file");
 }
 
-main();
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
+
+app.use(express.json());
+
+app.use("/api/subjects", subjectsRouter);
+
+app.get("/", (req, res) => {
+  res.send("Hello, welcome to the classroom API!");
+});
+
+app.listen(port, () => {
+  console.log(`Example app listening on port ${port}`);
+});
